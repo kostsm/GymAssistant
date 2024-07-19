@@ -1,0 +1,65 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/backgroundColor"
+    tools:context=".WorkoutActivity">
+
+    <TextView
+        android:id="@+id/heartRateTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ЧСС: "
+        android:textSize="20sp"
+        android:textColor="@color/textColorPrimary"
+        android:layout_marginBottom="8dp" />
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/heartRateChart"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginBottom="16dp"
+        android:background="@color/backgroundColor" />
+
+    <TextView
+        android:id="@+id/saturationTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Сатурация: "
+        android:textSize="20sp"
+        android:textColor="@color/textColorPrimary"
+        android:layout_marginBottom="8dp" />
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/saturationChart"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginBottom="16dp"
+        android:background="@color/backgroundColor" />
+
+    <TextView
+        android:id="@+id/activityStatusTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Активность: "
+        android:textSize="20sp"
+        android:textColor="@color/textColorPrimary"
+        android:layout_marginBottom="8dp" />
+
+    <View
+        android:id="@+id/activityIndicator"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/activity_indicator_background" />
+
+    <TextView
+        android:id="@+id/healthStatusTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Состояние: "
+        android:textSize="20sp"
+        android:textColor="@color/textColorPrimary" />
+</LinearLayout>

@@ -1,0 +1,12 @@
+<resources>
+    <color name="primaryColor">#6200EE</color>
+    <color name="primaryLightColor">#BB86FC</color>
+    <color name="primaryDarkColor">#3700B3</color>
+    <color name="secondaryColor">#03DAC5</color>
+    <color name="backgroundColor">#F5F5F5</color>
+    <color name="textColorPrimary">#212121</color>
+    <color name="textColorSecondary">#757575</color>
+    <color name="dangerColor">#D32F2F</color>
+    <color name="successColor">#388E3C</color>
+    <color name="warningColor">#FBC02D</color>
+</resources>
