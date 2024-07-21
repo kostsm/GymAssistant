@@ -2,10 +2,10 @@ package com.example.healthtracker
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.animateColor
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -25,7 +25,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -93,28 +92,22 @@ fun ProfileScreen(db: AppDatabase) {
     }
 
     fun saveUserProfile() {
-        val user = User(
-            name = name,
-            age = age.toInt(),
-            height = height.toInt(),
-            weight = weight.toInt(),
-            trainingLevel = trainingLevel,
-            smoking = smoking,
-            drinking = drinking
-        )
-        db.userDao().insert(user)
-        context.startActivity(Intent(context, MainActivity::class.java))
+        if (name.isBlank() || age.isBlank() || height.isBlank() || weight.isBlank()) {
+            Toast.makeText(context, "Все поля должны быть заполнены", Toast.LENGTH_LONG).show()
+        } else {
+            val user = User(
+                name = name,
+                age = age.toInt(),
+                height = height.toInt(),
+                weight = weight.toInt(),
+                trainingLevel = trainingLevel,
+                smoking = smoking,
+                drinking = drinking
+            )
+            db.userDao().insert(user)
+            context.startActivity(Intent(context, MainActivity::class.java))
+        }
     }
-
-    val infiniteTransition = rememberInfiniteTransition()
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000),
-            repeatMode = RepeatMode.Reverse
-        )
-    )
 
     Box(
         modifier = Modifier
@@ -135,24 +128,16 @@ fun ProfileScreen(db: AppDatabase) {
             Spacer(modifier = Modifier.height(48.dp)) // Смещаем название ниже
 
             val infiniteTransition = rememberInfiniteTransition()
-            val color by infiniteTransition.animateColor(
-                initialValue = Color.White,
-                targetValue = Color(0xFF50E3C2),
+            val scale by infiniteTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.1f,
                 animationSpec = infiniteRepeatable(
-                    animation = tween(2000, easing = LinearEasing),
+                    animation = tween(2000),
                     repeatMode = RepeatMode.Reverse
-                )
+                ), label = ""
             )
 
-            Text(
-                text = "Health Tracker",
-                color = color,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .padding(vertical = 16.dp)
-                    .scale(scale)
-            )
+            AnimatedTitle(text = "Health Tracker", scale)
 
             OutlinedTextField(
                 value = name,
