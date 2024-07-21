@@ -4,241 +4,266 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
 import android.media.MediaPlayer
 import android.os.Bundle
-import android.view.View
-import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
 import androidx.room.Room
 import com.example.healthtracker.database.AppDatabase
 import com.example.healthtracker.database.User
+import com.example.healthtracker.ui.theme.HealthTrackerTheme
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
-import com.github.mikephil.charting.data.LineDataSet
-import com.github.mikephil.charting.formatter.IFillFormatter
-import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
 
-class WorkoutActivity : AppCompatActivity() {
+class WorkoutActivity : ComponentActivity() {
 
-    private lateinit var heartRateTextView: TextView
-    private lateinit var saturationTextView: TextView
-    private lateinit var activityStatusTextView: TextView
-    private lateinit var healthStatusTextView: TextView
-    private lateinit var activityIndicator: View
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
-    private lateinit var heartRateChart: LineChart
-    private lateinit var saturationChart: LineChart
+        setContent {
+            HealthTrackerTheme {
+                val db = Room.databaseBuilder(
+                    applicationContext,
+                    AppDatabase::class.java, "health-tracker-db"
+                ).allowMainThreadQueries().build()
 
-    private lateinit var user: User
-    private lateinit var mediaPlayer: MediaPlayer
+                WorkoutScreen(db)
+            }
+        }
+    }
+}
 
-    private val fitnessDataReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            intent?.let {
-                val heartRate = it.getIntExtra("heartRate", 0)
-                val saturation = it.getIntExtra("saturation", 0)
-                val isActive = it.getBooleanExtra("isActive", false)
-                val data = FitnessData(heartRate, saturation, isActive)
+@Composable
+fun WorkoutScreen(db: AppDatabase) {
+    val context = LocalContext.current
+    val systemUiController = rememberSystemUiController()
 
-                updateUI(data)
-                evaluateHealth(data)
-                updateCharts(data)
+    var user by remember { mutableStateOf<User?>(null) }
+    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+    var heartRate by remember { mutableStateOf(0) }
+    var saturation by remember { mutableStateOf(0) }
+    var isActive by remember { mutableStateOf(false) }
+    var heartRateChart by remember { mutableStateOf<LineChart?>(null) }
+    var saturationChart by remember { mutableStateOf<LineChart?>(null) }
+
+    val fitnessDataReceiver = remember {
+        object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                intent?.let {
+                    val heartRateValue = it.getIntExtra("heartRate", 0)
+                    val saturationValue = it.getIntExtra("saturation", 0)
+                    val isActiveValue = it.getBooleanExtra("isActive", false)
+                    val data = FitnessData(heartRateValue, saturationValue, isActiveValue)
+
+                    user?.let { u ->
+                        heartRate = data.heartRate
+                        saturation = data.saturation
+                        isActive = data.isActive
+                        evaluateHealth(data, u, mediaPlayer!!)
+                        updateCharts(data, heartRateChart, saturationChart)
+                    }
+                }
             }
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_workout)
+    LaunchedEffect(Unit) {
+        context.registerReceiver(fitnessDataReceiver, IntentFilter("FitnessDataUpdate"))
+        context.startService(Intent(context, FitnessDataService::class.java))
 
-        heartRateTextView = findViewById(R.id.heartRateTextView)
-        saturationTextView = findViewById(R.id.saturationTextView)
-        activityStatusTextView = findViewById(R.id.activityStatusTextView)
-        healthStatusTextView = findViewById(R.id.healthStatusTextView)
-        activityIndicator = findViewById(R.id.activityIndicator)
-
-        heartRateChart = findViewById(R.id.heartRateChart)
-        saturationChart = findViewById(R.id.saturationChart)
-
-        val db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java, "health-tracker-db"
-        ).allowMainThreadQueries().build()
-
-        user = db.userDao().getUser()!!
-
-        // Устанавливаем пользовательские параметры для генератора данных
-        MockFitnessTracker.setUserParams(user.age, user.trainingLevel, user.smoking, user.drinking)
-
-        mediaPlayer = MediaPlayer.create(this, R.raw.warning_sound)
-
-        registerReceiver(fitnessDataReceiver, IntentFilter("FitnessDataUpdate"))
-        startService(Intent(this, FitnessDataService::class.java))
-
-        initializeCharts()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterReceiver(fitnessDataReceiver)
-        stopService(Intent(this, FitnessDataService::class.java))
-    }
-
-    private fun initializeCharts() {
-        heartRateChart.data = LineData()
-        saturationChart.data = LineData()
-
-        addCriticalLineToChart(heartRateChart, "Критическая ЧСС", 180f, true)
-        addCriticalLineToChart(saturationChart, "Критическая Сатурация", 90f, false)
-
-        heartRateChart.invalidate()
-        saturationChart.invalidate()
-    }
-
-    private fun addCriticalLineToChart(chart: LineChart, label: String, value: Float, fillAbove: Boolean) {
-        val entries = mutableListOf<Entry>()
-        for (i in 0 until 20) {
-            entries.add(Entry(i.toFloat(), value))
+        user = db.userDao().getUser()
+        user?.let { u ->
+            MockFitnessTracker.setUserParams(u.age, u.trainingLevel, u.smoking, u.drinking)
         }
-
-        val dataSet = createCriticalDataSet(chart, label, value, fillAbove)
-        chart.data.addDataSet(dataSet)
+        mediaPlayer = MediaPlayer.create(context, R.raw.warning_sound)
     }
 
-    private fun updateUI(data: FitnessData) {
-        heartRateTextView.text = "ЧСС: ${data.heartRate}"
-        saturationTextView.text = "Сатурация: ${data.saturation}"
-        activityStatusTextView.text = if (data.isActive) "Активен" else "Неактивен"
-        activityIndicator.setBackgroundColor(
-            if (data.isActive) Color.GREEN else Color.RED
+    DisposableEffect(Unit) {
+        onDispose {
+            context.unregisterReceiver(fitnessDataReceiver)
+            context.stopService(Intent(context, FitnessDataService::class.java))
+            mediaPlayer?.release()
+        }
+    }
+
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isActive) Color(0xFF50E3C2) else Color(0xFF4A90E2)
+    )
+
+    SideEffect {
+        systemUiController.setStatusBarColor(
+            color = backgroundColor
         )
     }
 
-    private fun evaluateHealth(data: FitnessData) {
-        val criticalHeartRate = calculateCriticalHeartRate(user, data.isActive)
-        val criticalSaturation = calculateCriticalSaturation(user, data.isActive)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(backgroundColor, Color(0xFF50E3C2))
+                )
+            )
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Spacer(modifier = Modifier.height(48.dp))
 
-        val heartRateStatus = if (data.heartRate in criticalHeartRate) "Норма" else "Опасность"
-        val saturationStatus = if (data.saturation in criticalSaturation) "Норма" else "Опасность"
+            AnimatedTitle(text = "Health Tracker")
 
-        healthStatusTextView.text = "Пульс: $heartRateStatus, Сатурация: $saturationStatus"
+            WorkoutInfo(heartRate, saturation, isActive)
 
-        // Воспроизведение звукового сигнала при опасном состоянии
-        if (heartRateStatus == "Опасность" || saturationStatus == "Опасность") {
-            playWarningSound()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            WorkoutCharts(
+                onHeartRateChartCreated = { heartRateChart = it },
+                onSaturationChartCreated = { saturationChart = it }
+            )
         }
     }
+}
 
-    private fun updateCharts(data: FitnessData) {
-        val heartRateEntry = Entry((heartRateChart.data.entryCount + 1).toFloat(), data.heartRate.toFloat())
-        val saturationEntry = Entry((saturationChart.data.entryCount + 1).toFloat(), data.saturation.toFloat())
+@Composable
+fun WorkoutInfo(heartRate: Int, saturation: Int, isActive: Boolean) {
+    val heartRateColor by animateColorAsState(if (heartRate > 150) Color.Red else Color.White)
+    val saturationColor by animateColorAsState(if (saturation < 93) Color.Red else Color.White)
 
-        addEntryToChart(heartRateChart, heartRateEntry, "ЧСС", 180f, true) // fillAbove = true для пульса
-        addEntryToChart(saturationChart, saturationEntry, "Сатурация", 90f, false) // fillAbove = false для сатурации
-    }
-
-    private fun addEntryToChart(chart: LineChart, entry: Entry, label: String, criticalValue: Float, fillAbove: Boolean) {
-        val data = chart.data
-
-        var dataSet: ILineDataSet? = data.getDataSetByLabel(label, true)
-        if (dataSet == null) {
-            dataSet = createDataSet(label)
-            data.addDataSet(dataSet)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "ЧСС",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "$heartRate",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = heartRateColor,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "уд/мин",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White
+                )
+            }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Сатурация",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "$saturation",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = saturationColor,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "%",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White
+                )
+            }
         }
-
-        (dataSet as LineDataSet).addEntry(entry)
-
-        // Добавление точки в критическую линию
-        var criticalDataSet: ILineDataSet? = data.getDataSetByLabel("Критическая $label", true)
-        if (criticalDataSet == null) {
-            criticalDataSet = createCriticalDataSet(chart, "Критическая $label", criticalValue, fillAbove)
-            data.addDataSet(criticalDataSet)
-        }
-
-        (criticalDataSet as LineDataSet).addEntry(Entry(entry.x, criticalValue))
-
-        data.notifyDataChanged()
-        chart.notifyDataSetChanged()
-        chart.setVisibleXRangeMaximum(20f)
-        chart.moveViewToX(data.entryCount.toFloat() - 20)
-    }
-
-    private fun createCriticalDataSet(chart: LineChart, label: String, value: Float, fillAbove: Boolean): LineDataSet {
-        val entries = mutableListOf<Entry>()
-        for (i in 0 until 20) {
-            entries.add(Entry(i.toFloat(), value))
-        }
-
-        val dataSet = LineDataSet(entries, label)
-        dataSet.lineWidth = 2.5f
-        dataSet.setDrawCircles(false)
-        dataSet.setDrawValues(false)
-        dataSet.enableDashedLine(10f, 5f, 0f)
-        dataSet.color = Color.RED
-        dataSet.setDrawFilled(true)
-        dataSet.fillFormatter = IFillFormatter { _, _ ->
-            if (fillAbove) chart.yChartMax else chart.yChartMin
-        }
-        dataSet.fillColor = Color.RED
-        dataSet.fillAlpha = 50
-        return dataSet
-    }
-
-    private fun createDataSet(label: String): LineDataSet {
-        val dataSet = LineDataSet(null, label)
-        dataSet.lineWidth = 2.5f
-        dataSet.setDrawCircles(false)
-        dataSet.setDrawValues(false)
-        dataSet.mode = LineDataSet.Mode.CUBIC_BEZIER
-        dataSet.color = ContextCompat.getColor(this, R.color.primaryColor)
-        return dataSet
-    }
-
-    private fun calculateCriticalHeartRate(user: User, isActive: Boolean): IntRange {
-        val maxHeartRate = 220 - user.age
-        val lowerBound = if (isActive) 90 else 60  // Устанавливаем нижнюю границу пульса
-        val upperBound = if (isActive) {
-            (0.9 * maxHeartRate * getTrainingLevelFactor(user) * getBmiFactor(user)).toInt()
-        } else {
-            (0.75 * maxHeartRate * getTrainingLevelFactor(user) * getBmiFactor(user)).toInt()
-        }
-        return lowerBound..upperBound
-    }
-
-    private fun calculateCriticalSaturation(user: User, isActive: Boolean): IntRange {
-        val lowerBound = if (user.smoking) 85 else 90
-        val upperBound = 100
-        return lowerBound..upperBound
-    }
-
-    private fun getBmiFactor(user: User): Double {
-        val heightInMeters = user.height / 100.0
-        val bmi = user.weight / (heightInMeters * heightInMeters)
-        return if (bmi < 18.5) {
-            0.9
-        } else if (bmi < 24.9) {
-            1.0
-        } else {
-            0.8
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = if (isActive) listOf(Color.Green, Color.LightGray) else listOf(
+                            Color.Red,
+                            Color.DarkGray
+                        )
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = if (isActive) "Активен" else "Неактивен",
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
+}
 
-    private fun getTrainingLevelFactor(user: User): Double {
-        return when (user.trainingLevel) {
-            0 -> 1.2  // Новичок
-            1 -> 1.1  // Любитель
-            2 -> 1.0  // Продвинутый
-            3 -> 0.9  // Профессионал
-            else -> 1.0
-        }
-    }
+@Composable
+fun WorkoutCharts(
+    onHeartRateChartCreated: (LineChart) -> Unit,
+    onSaturationChartCreated: (LineChart) -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        AndroidView(
+            factory = { ctx ->
+                LineChart(ctx).apply {
+                    data = LineData()
+                    initializeCharts(this, "Критическая ЧСС", 180f, true)
+                    onHeartRateChartCreated(this)
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+        )
 
-    private fun playWarningSound() {
-        if (!mediaPlayer.isPlaying) {
-            mediaPlayer.start()
-        }
+        AndroidView(
+            factory = { ctx ->
+                LineChart(ctx).apply {
+                    data = LineData()
+                    initializeCharts(this, "Критическая Сатурация", 90f, false)
+                    onSaturationChartCreated(this)
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+        )
     }
 }
