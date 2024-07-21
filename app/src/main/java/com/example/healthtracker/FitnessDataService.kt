@@ -7,7 +7,7 @@ import android.os.IBinder
 
 class FitnessDataService : Service() {
     private val handler = Handler()
-    private val interval = 2000L // Интервал в миллисекундах
+    private val interval = 2000L // Интервал предачи данных в миллисекундах
 
     private val runnable = object : Runnable {
         override fun run() {

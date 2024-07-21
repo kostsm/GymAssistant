@@ -1,71 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/background_gradient"
+    android:orientation="vertical"
+    android:padding="16dp"
     tools:context=".ProfileActivity">
 
-    <LinearLayout
+    <ImageView
+        android:id="@+id/backgroundImageView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/background_athlete"
+        android:alpha="0.1"
+        android:layout_gravity="center" />
+
+    <EditText
+        android:id="@+id/nameEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:hint="Имя"
+        android:background="@drawable/rounded_edittext" />
 
-        <EditText
-            android:id="@+id/nameEditText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Имя" />
+    <EditText
+        android:id="@+id/ageEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Возраст"
+        android:inputType="number"
+        android:background="@drawable/rounded_edittext" />
 
-        <EditText
-            android:id="@+id/ageEditText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="number"
-            android:hint="Возраст" />
+    <EditText
+        android:id="@+id/heightEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Рост (см)"
+        android:inputType="number"
+        android:background="@drawable/rounded_edittext" />
 
-        <EditText
-            android:id="@+id/heightEditText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="number"
-            android:hint="Рост (см)" />
+    <EditText
+        android:id="@+id/weightEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Вес (кг)"
+        android:inputType="number"
+        android:background="@drawable/rounded_edittext" />
 
-        <EditText
-            android:id="@+id/weightEditText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="number"
-            android:hint="Вес (кг)" />
+    <TextView
+        android:id="@+id/trainingLevelTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Тренированность"
+        android:textColor="@android:color/white" />
 
-        <SeekBar
-            android:id="@+id/trainingLevelSeekBar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="3" />
+    <SeekBar
+        android:id="@+id/trainingLevelSeekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="3"
+        android:progress="0" />
 
-        <TextView
-            android:id="@+id/trainingLevelTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Тренированность (0-3)" />
+    <CheckBox
+        android:id="@+id/smokingCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Курение"
+        android:textColor="@android:color/white" />
 
-        <CheckBox
-            android:id="@+id/smokingCheckBox"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Курение" />
+    <CheckBox
+        android:id="@+id/drinkingCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Алкоголь"
+        android:textColor="@android:color/white" />
 
-        <CheckBox
-            android:id="@+id/drinkingCheckBox"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Алкоголь" />
+    <Button
+        android:id="@+id/saveProfileButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Сохранить профиль"
+        android:background="@drawable/rounded_button" />
 
-        <Button
-            android:id="@+id/saveProfileButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Сохранить" />
-    </LinearLayout>
-</ScrollView>
+</LinearLayout>
